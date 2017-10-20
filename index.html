@@ -24,23 +24,39 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-sm-8">
-                <div class="row">
-                    
-                    <div class="col-sm-5 text-center"><!-- player choice pic -->
+            <div class="col-xs-12 col-sm-8">
+                <div class="row green">
+                    <!-- pictures, scoreboard, and match chat will go here -->
+                    <div class="col-xs-5 text-center">
+                        <!-- player choice pic -->
                         <img src="assets/images/flip_paper.gif"/>
                     </div>
 
-                    <div class="col-sm-2 text-center">Vs.<!--versus pic or something like that--></div>
-
-                    <div class="col-sm-5 text-center"><!-- opponent choice pic -->
+                    <div class="col-xs-2 text-center">
+                        <!--versus pic or something like that-->
+                        Vs.
+                    </div>
+                    <div class="col-xs-5 text-center">
+                        <!-- opponent choice pic -->
                         <img src="assets/images/rock.gif"/>
                     </div>
-
                 </div>
-                <!-- pictures, scoreboard, and match chat will go here -->
+                <div class="row" >
+                    <div class="col-xs-2 text-center" id="choice_buttons">
+                        <div class="btn-group btn-group-vertical">
+                                <button class="btn btn-default">Rock</button>
+                                <button class="btn btn-default">Paper</button>
+                                <button class="btn btn-default">Scissors</button>
+                        </div>
+                    </div>
+                    <div class="col-xs-8" id="match_chat">
+                        <form>
+                            <span><input type="text" value="Enter Message"/><input type="submit"></span>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div class="col-sm-4 hidden-xs" style="background-color: red;">
+            <div class="hidden-xs col-sm-4">
                 <!-- lobby and lobby chat will be here -->
                 <div class="panel panel-default">
                     <div class="panel-heading">
