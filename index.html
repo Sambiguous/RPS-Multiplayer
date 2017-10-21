@@ -42,16 +42,17 @@
                     </div>
                 </div>
                 <div class="row" >
-                    <div class="col-xs-2 text-center" id="choice_buttons">
-                        <div class="btn-group btn-group-vertical">
-                                <button class="btn btn-default">Rock</button>
-                                <button class="btn btn-default">Paper</button>
-                                <button class="btn btn-default">Scissors</button>
+                    <div class="col-xs-4 text-center">
+                        <div class="btn-group btn-group-vertical" id="choice_buttons">
+                            <button class="btn btn-default">Rock</button>
+                            <button class="btn btn-default">Paper</button>
+                            <button class="btn btn-default">Scissors</button>
                         </div>
                     </div>
                     <div class="col-xs-8" id="match_chat">
+                        <div class="pre-scrollable" id="chat_log"></div>
                         <form>
-                            <span><input type="text" value="Enter Message"/><input type="submit"></span>
+                            <span><input id="match_chat_input" type="text" placeholder="Enter Message"/><input type="submit"></span>
                         </form>
                     </div>
                 </div>

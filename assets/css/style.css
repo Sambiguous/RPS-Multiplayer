@@ -1,3 +1,28 @@
+form {
+    width: 100%;
+}
+
+#chat_log {
+    height: 170px;
+    width: 100%;
+    background-color: darkgray;
+}
+
+#match_chat_input{
+    width: calc(100% - 60px) !important;
+}
+
+#choice_buttons{
+    width: 100%;
+}
+
+#choice_buttons button {
+    height: 66px;
+}
+
+
+
+
 .test {
     background-color: blue;
 }
