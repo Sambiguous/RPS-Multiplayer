@@ -1,14 +1,57 @@
+var config = {
+    apiKey: "AIzaSyApm8d6QdvEX0iyR4Y5qF1KbPPQH6i7pYM",
+    authDomain: "rock-paper-scissors-afad9.firebaseapp.com",
+    databaseURL: "https://rock-paper-scissors-afad9.firebaseio.com",
+    storageBucket: "rock-paper-scissors-afad9.appspot.com",
+  };
+
+firebase.initializeApp(config);
+
+var database = firebase.database();
+
+
 var playerObject = {
     "logins": 0,
     "wins": 0,
     "losses": 0,
     "ties": 0,
-    "username": "", 
+    "username": "Player", 
 };
+
+var firebasePlayerKey = ""
+
 
 function setLocalStorage(obj){//slighty shorter-hand way to update the local storage object
     localStorage.setItem("rps", JSON.stringify(obj));
 };
+
+function pushPlayerObjToDatabase(obj){//does exactly what you think it does, it also stores the firebase key associated with this playerObject in the database
+    database.ref().child("players").push(obj);
+
+    //grab key associated with local playerObject and store value as a variable
+    database.ref().child("players").once("value", function(snapshot){
+
+            setPlayerKey(snapshot.val());
+        
+    });
+};
+
+function removePlayerObjFromDatabase(){
+    database.ref().child("players").child(firebasePlayerKey).remove();
+};
+
+function setPlayerKey(object){
+    var un = playerObject["username"]
+    for(var i in object){
+        if(object[i].username === un){
+            firebasePlayerKey = i;
+        };
+    };
+};
+
+database.ref().child("players").on("child_removed", function(snap){
+    //do stuff here when a player leaves the lobby
+});
 
 function checkLocalStorage(){
     if(localStorage.getItem("rps") === null){
@@ -32,8 +75,7 @@ function submitUsername(){
     //hide overlay
     $("#overlay").hide();
 
-    console.log(playerObject)
-    console.log(localStorage.getItem("rps"));
+    pushPlayerObjToDatabase(playerObject);
 };
 
 function createOverlay(){//creates overlay where players input their username if it is their first time playing
@@ -52,17 +94,34 @@ function createOverlay(){//creates overlay where players input their username if
 };
 
 
+
+$(window).on("beforeunload", function(){
+    removePlayerObjFromDatabase();
+});
+
+
+
+
 $(document).ready(function(){
+
+    //localStorage.clear()
     checkLocalStorage();
 
     if(playerObject["logins"] === 0){
         createOverlay();
+    }
+    else{
+        pushPlayerObjToDatabase(playerObject);
     };
 
+    $("#rock_button").on("click", function(){//lol
+        database.ref().set({});
+    });
 
-
-
-    //localStorage.clear()
     playerObject["logins"] ++;
     setLocalStorage(playerObject);
+
+
 });
+
+
