@@ -46,7 +46,7 @@
                         <div class="btn-group btn-group-vertical" id="choice_buttons">
                             <button id="rock_button" class="btn btn-default">Rock</button>
                             <button id="paper_button" class="btn btn-default">Paper</button>
-                            <button class="btn btn-default">Scissors</button>
+                            <button id="scissors_button" class="btn btn-default">Scissors</button>
                         </div>
                     </div>
                     <div class="col-xs-8" id="match_chat">
@@ -60,8 +60,8 @@
             <div class="hidden-xs col-sm-4">
                 <!-- lobby and lobby chat will be here -->
                 <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <p>Lobby</p>
+                    <div id="lobby_heading" class="panel-heading">
+                        <span><p>Lobby</p><button onclick="findMatch()" class="btn btn-default">find match</button></span>
                     </div>
                     <div class="panel-body" id="lobby"></div>
                 </div>

@@ -48,6 +48,15 @@ form {
     color: black;
 }
 
+#lobby_heading {
+    position: relative;
+}
+
+#lobby_heading span button {
+    position: absolute;
+    right: 0px;
+    bottom: 10px;
+}
 
 
 .test {

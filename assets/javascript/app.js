@@ -9,8 +9,12 @@ firebase.initializeApp(config);
 
 var database = firebase.database();
 
+playerObjectLocations = {//keeps track of the nodes the player object resides in in the database
+
+}
 
 var playerObject = {
+    "status": "chilling",
     "logins": 0,
     "wins": 0,
     "losses": 0,
@@ -21,61 +25,74 @@ var playerObject = {
 var firebasePlayerKey = ""
 
 
-function setLocalStorage(obj){//slighty shorter-hand way to update the local storage object
+function setLS(obj){//slighty shorter-hand way to update the local storage object
     localStorage.setItem("rps", JSON.stringify(obj));
 };
 
-function pushPlayerObjToDatabase(obj){//does exactly what you think it does, it also stores the firebase key associated with this playerObject in the database
-    database.ref().child("players").push(obj);
+function setDB(){
+    console.log(database.ref().child("players").child(playerObjectLocations["players"]).set(playerObject));
+}
 
-    //grab key associated with local playerObject and store value as a variable
-    database.ref().child("players").once("value", function(snapshot){
+function pushPlayerObj(obj, node){//appends player object to the specified node
 
-            setPlayerKey(snapshot.val());
-        
-    });
+    var key = database.ref().child(node).push(obj).key;
+    playerObjectLocations[node] = key;
 };
 
-function removePlayerObjFromDatabase(){
-    database.ref().child("players").child(firebasePlayerKey).remove();
+function removePlayerObj(node){//removes the player object from the designated node in the database
+    database.ref().child(node).child(playerObjectLocations[node]).remove();
+    delete playerObjectLocations[node];
 };
 
-function setPlayerKey(object){
-    var un = playerObject["username"]
-    for(var i in object){
-        if(object[i].username === un){
-            firebasePlayerKey = i;
+
+
+function findMatch(){
+    playerObject["status"] = "searching";
+    setDB();
+    database.ref().child("players").once("value", function(snap){
+        for(var i in snap.val()){
+            var player = snap.val()[i];
+            if(player["status"] === "searching" && i != playerObjectLocations["players"]){
+                console.log("found an opponent yo");
+            };
         };
-    };
+
+        console.log("couldn't find anybody");
+    });
+
+
 };
 
 database.ref().child("players").on("child_removed", function(snap){
     //do stuff here when a player leaves the lobby
 });
 
-function checkLocalStorage(){
+function checkLocalStorage(){//check to see if user has played before
+
+    //if user has not played, set local storage equal to default playerObject
     if(localStorage.getItem("rps") === null){
-        localStorage.setItem("rps", JSON.stringify(playerObject)); 
+        setLS(playerObject); 
     }
+    //if they have played before, set playerObject equal to the stored object
     else{
         playerObject = JSON.parse(localStorage.getItem("rps"));
     };
 }
 
-function submitUsername(){
+function submitUsername(){//only executes if it is the first time the player has visited the page
     //grab the user's input
     var userName = $("#username_input").val().trim();
 
     //update playerObject
     playerObject["username"] = userName;
 
-    //set updat local Storage to mirror the most most recent playerObject
-    setLocalStorage(playerObject);
+    //update local Storage to mirror the most most recent playerObject
+    setLS(playerObject);
 
     //hide overlay
     $("#overlay").hide();
 
-    pushPlayerObjToDatabase(playerObject);
+    pushPlayerObj(playerObject, "players");
 };
 
 function createOverlay(){//creates overlay where players input their username if it is their first time playing
@@ -93,13 +110,19 @@ function createOverlay(){//creates overlay where players input their username if
     });
 };
 
-
-
 $(window).on("beforeunload", function(){
-    removePlayerObjFromDatabase();
+
+    //set status back to 'chilling'
+    playerObject["status"] = "chilling";
+
+    //save playerObject to local storage
+    setLS(playerObject);
+
+    //delete player object from all nodes
+    for(var i in playerObjectLocations){
+        removePlayerObj(i);
+    };
 });
-
-
 
 
 $(document).ready(function(){
@@ -111,7 +134,7 @@ $(document).ready(function(){
         createOverlay();
     }
     else{
-        pushPlayerObjToDatabase(playerObject);
+        pushPlayerObj(playerObject, "players");
     };
 
     $("#rock_button").on("click", function(){//lol
@@ -119,9 +142,7 @@ $(document).ready(function(){
     });
 
     playerObject["logins"] ++;
-    setLocalStorage(playerObject);
-
-
+    setLS(playerObject);
 });
 
 
