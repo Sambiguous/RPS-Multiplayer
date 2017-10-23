@@ -26,7 +26,7 @@
         <div id="display" class="row"></div>
         <div class="row">
             <div class="col-xs-12 col-sm-8">
-                <div class="row green">
+                <div id="throws" class="row green">
                     <!-- pictures, scoreboard, and match chat will go here -->
                     <div class="col-xs-5 text-center">
                         <!-- player choice pic -->
@@ -62,7 +62,7 @@
                 <!-- lobby and lobby chat will be here -->
                 <div class="panel panel-default">
                     <div id="lobby_heading" class="panel-heading">
-                        <span><p>Lobby</p><button onclick="findMatch()" class="btn btn-default">find match</button></span>
+                        <span><p>Lobby</p><button id="find_match_button" onclick="findMatch()" class="btn btn-default">find match</button></span>
                     </div>
                     <div class="panel-body" id="lobby"></div>
                 </div>

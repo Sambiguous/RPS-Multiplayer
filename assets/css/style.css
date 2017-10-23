@@ -48,6 +48,10 @@ form {
     color: black;
 }
 
+#username_input{
+    color: black;
+}
+
 #lobby_heading {
     position: relative;
 }
@@ -56,6 +60,15 @@ form {
     position: absolute;
     right: 0px;
     bottom: 10px;
+}
+
+#count_down{
+    text-align: center;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-color: rgb(51, 104, 67);
+    top: 0;
 }
 
 

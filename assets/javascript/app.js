@@ -13,6 +13,8 @@ var database = firebase.database();
 var playerObjectLocations = {//keeps track of the nodes the player object resides in in the database
 };
 
+var listening = false;
+
 var matchListener;
 
 var countDown;
@@ -45,11 +47,12 @@ function setDB(){
     database.ref().child("players").child(playerObjectLocations["players"]).set(playerObject);
 };
 
-function pushObjToDB(obj, node){//appends object to the specified database node
-
+function pushObjToDB(obj, node){//appends object to the specified database node and records the unique key string
     var key = database.ref().child(node).push(obj).key;
     playerObjectLocations[node] = key;
-    matchKey = key;
+        if(node === "matches"){
+            matchKey = key;
+        };
 };
 
 function removePlayerObj(node){//removes the player object from the designated node in the database
@@ -58,17 +61,28 @@ function removePlayerObj(node){//removes the player object from the designated n
 };
 
 function findMatch(){
-    playerObject["status"] = "searching";
-    setDB();
-    database.ref().child("players").once("value", function(snap){
-        for(var i in snap.val()){
-            var opponent = snap.val()[i];
-            if(opponent["status"] === "searching" && i != playerObjectLocations["players"]){
-                matchObject = buildMatchObject(playerObject, opponent)
-                pushObjToDB(matchObject, "matches");
+    if(playerObject["status"] === "chilling"){
+        playerObject["status"] = "searching";
+        setDB();
+        database.ref().child("players").once("value", function(snap){
+            for(var i in snap.val()){
+                var opponent = snap.val()[i];
+                if(opponent["status"] === "searching" && i != playerObjectLocations["players"]){
+                    matchObject = buildMatchObject(playerObject, opponent)
+                    pushObjToDB(matchObject, "matches");
+                };
             };
-        };
-    });
+        });
+    }
+    else if(playerObject["status"] === "searching"){
+        playerObject["status"] = "chilling";
+        setDB();
+    };
+    if(!listening){
+        setUpPlayerListener()
+        listening = true;
+    };
+
 };
 
 
@@ -109,9 +123,6 @@ function submitUsername(){//only executes if it is the first time the player has
     //update playerObject
     playerObject["username"] = userName;
 
-    //update local Storage to mirror the most most recent playerObject
-    setLS(playerObject);
-
     //hide overlay
     $("#overlay").hide();
 
@@ -141,51 +152,58 @@ function updateDisplay(text, tag, delay){
      }, delay);
 };
 
-function win(choice1, choice2){
-
+function win(){
+    
 }
-function play(pc, oc){
+
+
+function evalRound(pc, oc){
     if(pc == "rock"){
         if(oc == "rock"){
-            //tie
+            playerObject["ties"] ++
         }
         else if(oc == "paper"){
-            //loss
+            playerObject["losses"] ++
         }
         else{
-            win()
+            playerObject["wins"] ++
         }
     }
     else if(pc == "paper"){
         if(oc == "rock"){
-            //win
+            playerObject["wins"] ++
         }
         else if(oc == "paper"){
-            //tie
+            playerObject["ties"] ++
         }
         else{
-            //loss
+            playerObject["losses"] ++
         }
     }
     else{
         if(oc == "rock"){
-            //loss
+            playerObject["losses"] ++
         }
         else if(oc == "paper"){
-            //win
+            playerObject["wins"] ++
         }
         else{
-            //tie
+            playerObject["ties"] ++
         }
     } 
+    setDB();
 }
 
 function startCountDown(){
     var text = ["Rock", "Paper", "Scissors", "Shoot!!"];
     var index = 1;
-    $("#display").html("<h1>Rock</h1>");
+    var countDisplay = $("<div id='count_down'></div>");
+    $("#throws").append(countDisplay);
+
+    
+    $("#count_down").html("<h1>Rock</h1>");
     var countDown = setInterval(function(){
-        $("#display").html("<h1>" + text[index] + "</h1>");
+        $("#count_down").html("<h1>" + text[index] + "</h1>");
         if(index == text.length){
             clearInterval(countDown);
             database.ref().child("matches").child(matchKey).child("status").set("waiting");
@@ -200,13 +218,17 @@ function startCountDown(){
 };
 
 function displayResults(obj){
+     opThrow = obj[themThisRound + "choice"]
+     userThrow = obj[youThisRound + "choice"]
+
+
+
     setTimeout(function(){
-        var opUrl = "assets/images/" + obj[themThisRound + "choice"] + ".gif";
-        var userUrl = "assets/images/flip_" + obj[youThisRound + "choice"] + ".gif";
-        console.log("opUrl: " + opUrl);
-        console.log("userUrl: " + userUrl);
+        var opUrl = "assets/images/" + opThrow + ".gif";
+        var userUrl = "assets/images/flip_" + userThrow + ".gif";
         $("#opponent_choice").attr("src", opUrl);
         $("#player_choice").attr("src", userUrl);
+        evalRound(userThrow, opThrow);
     }, 4000);
 }
 
@@ -237,7 +259,7 @@ $(window).on("beforeunload", function(){
     playerObject["status"] = "chilling";
 
     //save playerObject to local storage
-    setLS(playerObject);
+    //setLS(playerObject);
 
     //delete player object from all nodes
     for(var i in playerObjectLocations){
@@ -246,10 +268,23 @@ $(window).on("beforeunload", function(){
     removePlayerObj(matchKey);
 });
 
+function setUpPlayerListener(){
+    database.ref().child("players").child(playerObjectLocations["players"]).on("value", function(snap){
+        console.log(snap.val());
+        console.log(snap.val()["status"]);
+        if(snap.val()["status"] === "searching"){
+            $("#find_match_button").html("searching...");
+        }
+        else if(snap.val()["status"] === "chilling"){
+            $("#find_match_button").html("Find Match");
+        };
+    });
+};
+
 
 $(document).ready(function(){
 
-    //localStorage.clear()
+    localStorage.clear()
     checkLocalStorage();
 
     if(playerObject["logins"] === 0){
@@ -307,7 +342,6 @@ $(document).ready(function(){
 
                     matchListener = database.ref().child("matches").child(i).on("value", function(snap){
                         matchObject = snap.val();
-                        console.log
                         if(matchObject["status"] === "throwing"){
                             startCountDown();
                             displayResults(matchObject);
@@ -331,7 +365,6 @@ $(document).ready(function(){
     });
 
     playerObject["logins"] ++;
-    setLS(playerObject);
 });
 
 
