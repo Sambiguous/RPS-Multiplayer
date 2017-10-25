@@ -370,7 +370,12 @@ function initializeMatchChat(){
     $("#chat_log").html("");
     $("#chat_log").append($("<ul id='chat'></ul>"))
     matchChatListener = database.ref().child("matches").child(keys["matches"]).child("chat").on("child_added", function(snap){
-        var entry = $("<li class='entry'><span class='enemy'>" + snap.val()["username"] + ":</span> " + snap.val()["text"] + "</li>")
+        obj = snap.val();
+        var entryClass;
+        if(obj["username"] === playerObject["username"]){entryClass = "you"}
+        else{entryClass = "enemy"}
+        
+        var entry = $("<li class='entry'><span class='" + entryClass + "'>" + snap.val()["username"] + ":</span> " + snap.val()["text"] + "</li>")
         $("#chat").append(entry)
     })
 }
@@ -480,7 +485,12 @@ $(document).ready(function(){
                 "username": playerObject["username"],
                 "text": $("#match_chat_input").val().trim()
             };
-            database.ref().child("matches").child(keys["matches"]).child("chat").push(textSubmition);
+
+            if(textSubmition["text"].length != 0){
+                database.ref().child("matches").child(keys["matches"]).child("chat").push(textSubmition);
+            };
+
+            $("#match_chat_input").val("");
         };
     });
 
