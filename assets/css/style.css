@@ -2,6 +2,21 @@ form {
     width: 100%;
 }
 
+body {
+    background-color: #4F7CAC;
+}
+
+
+
+.stat{
+    border-bottom: 1px solid #931621;
+    margin-right: 20px; 
+}
+
+.stat span {
+    float: right;
+}
+
 #chat_log {
     height: 170px;
     width: 100%;
@@ -17,7 +32,7 @@ form {
 }
 
 #choice_buttons button {
-    height: 66px;
+    height: 50px;
 }
 
 .faded {
@@ -30,6 +45,13 @@ form {
     width: 100%;
     background-color: rgba(104, 101, 101, 0.7);
     top: 0;
+}
+#opponent_choice {
+    width: 70%;
+}
+
+#player_choice {
+    width: 70%;
 }
 
 #username_prompt{
@@ -70,6 +92,8 @@ form {
     min-height: 75px;
     position: relative;
     text-align: center;
+    background-color: rgb(51, 104, 67);
+    
 }
 
 #count_down{
@@ -79,13 +103,4 @@ form {
     width: 100%;
     background-color: rgb(51, 104, 67);
     top: 0;
-}
-
-
-.test {
-    background-color: blue;
-}
-
-.green {
-    background-color: green;
 }

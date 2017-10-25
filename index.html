@@ -19,9 +19,26 @@
 <body>
     <div class="container">
         <div class="row">
-            <div class="jumbotron">
-                <h1>Rock Paper Scissors</h1>
+            <div class="col-xs-5">
+                <h1>Rock</h1>
+                <h1>Paper</h1>
+                <h1>Scissors</h1>
             </div>
+            <div class="col-xs-3">
+                <h2 id="title">You</h2>
+                <p class="stat">Wins: <span id="wins"></span></p>
+                <p class="stat">Losses: <span id="losses"></span></p>
+                <p class="stat">Ties: <span id="ties"></span></p>
+                <p class="stat">Rounds Played: <span id="rounds"></span></p>
+            </div>
+            <div class="col-xs-1"></div>
+            <div class="col-xs-3">
+                <h2 id="op_title">Opponent</h2>
+                <p class="stat">Wins: <span id="op_wins"></span></p>
+                <p class="stat">Losses: <span id="op_losses"></span></p>
+                <p class="stat">Ties: <span id="op_ties"></span></p>
+                <p class="stat">Rounds Played: <span id="op_rounds"></span></p>
+            </div> 
         </div>
         <div id="display" class="row"></div>
         <div class="row">
@@ -30,7 +47,7 @@
                     <!-- pictures, scoreboard, and match chat will go here -->
                     <div class="col-xs-5 text-center">
                         <!-- player choice pic -->
-                        <img id="player_choice" src="assets/images/flip_paper.gif"/>
+                        <img id="player_choice" src="assets/images/flip_scissors.gif"/>
                     </div>
 
                     <div class="col-xs-2 text-center">
@@ -39,7 +56,7 @@
                     </div>
                     <div  class="col-xs-5 text-center">
                         <!-- opponent choice pic -->
-                        <img id="opponent_choice" src="assets/images/rock.gif"/>
+                        <img id="opponent_choice" src="assets/images/scissors.gif"/>
                     </div>
                 </div>
                 <div class="row" >
