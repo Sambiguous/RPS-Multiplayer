@@ -19,14 +19,13 @@ var listening = false;
 //
 var matchListener;
 var playerListener;
+
 var countDown;
 
 
-var matchKey = "";
-
 //stores either "player1" or "player2" depending on the current match
-youThisRound = "";
-themThisRound = "";
+youThisMatch = "";
+themThisMatch = "";
 
 //stores opponenst lifetime record: re-assigned every time you enter a new match
 var opStats = {
@@ -89,9 +88,6 @@ function getDBInfo(path){
 function pushObjToDB(obj, node){//appends object to the specified database node and records the unique key string
     var key = database.ref().child(node).push(obj).key;
     keys[node] = key;
-        if(node === "matches"){
-            matchKey = key;
-        };
 };
 
 function removePlayerObj(node){//removes the player object from the designated node in the database
@@ -122,6 +118,8 @@ function findMatch(){
         playerObject["status"] = "chilling";
         setDBInfo();
     };
+    //if not already listening, initialize player listener, which is mainly used to
+    //change the matchbutton text by reading the status of the player object in firebase
     if(!listening){
         setUpPlayerListener()
         listening = true;
@@ -206,9 +204,9 @@ function updateDisplay(text, tag, delay){
 
 //evaluates the round and returns an object containing the results
 function evalRound(match_obj){
-    var pc = match_obj[youThisRound + "choice"];
-    var oc = match_obj[themThisRound + "choice"];
-    var op = match_obj[themThisRound]["username"]
+    var pc = match_obj[youThisMatch + "choice"];
+    var oc = match_obj[themThisMatch + "choice"];
+    var op = match_obj[themThisMatch]["username"]
     output = {};
 
     output["opUrl"] = "assets/images/" + oc + ".gif";
@@ -313,11 +311,11 @@ function choiceButton(choice){
     if(status === "waiting"){
 
         //set your choice for the round, and playerready attribute to true
-        setDBInfo(["matches", keys["matches"], youThisRound + "ready"], true);
-        setDBInfo(["matches", keys["matches"], youThisRound + "choice"], choice);
+        setDBInfo(["matches", keys["matches"], youThisMatch + "ready"], true);
+        setDBInfo(["matches", keys["matches"], youThisMatch + "choice"], choice);
 
         //'opponentReady' will be set to a boolean based on whether the opponent has picked yet
-        var opponentReady = getDBInfo(["matches", keys["matches"], themThisRound + "ready"]);
+        var opponentReady = getDBInfo(["matches", keys["matches"], themThisMatch + "ready"]);
             
         //if they are ready, set the firebase matchObject status to 'throwing'. this is heard by  
         //the matchListener and triggers the round
@@ -344,7 +342,6 @@ $(window).on("beforeunload", function(){
     for(var i in keys){
         removePlayerObj(i);
     };
-    removePlayerObj(matchKey);
 });
 
 //creates a listener for the playerObject in firebase: mainly used for updating the button text
@@ -354,7 +351,6 @@ function setUpPlayerListener(){
         var button = $("#find_match_button")
         if(snap.val()["status"] === "searching"){
             button.html("Cancel Search");
-            $("display").html("Searching for Match");
         }
         else if(snap.val()["status"] === "chilling"){
             button.removeClass("faded");
@@ -407,14 +403,14 @@ $(document).ready(function(){
 
         if(newMatch["player1"]["username"] === playerObject["username"]){
             text += newMatch["player2"]["username"];
-            youThisRound = "player1";
-            themThisRound = "player2";
+            youThisMatch = "player1";
+            themThisMatch = "player2";
             inMatch = true;
         }
         else if(newMatch["player2"]["username"] === playerObject["username"]){
             text += newMatch["player1"]["username"];
-            youThisRound = "player2";
-            themThisRound = "player1";
+            youThisMatch = "player2";
+            themThisMatch = "player1";
             inMatch = true
         };
 
@@ -426,7 +422,7 @@ $(document).ready(function(){
             keys["matches"] = snap.key;
 
             //grab opponent record
-            getOpStats(getDBInfo(["matches", snap.key, themThisRound]));
+            getOpStats(getDBInfo(["matches", snap.key, themThisMatch]));
             displayRecord();
 
             //set playerObject status to fighting (unlocks the game buttons and prevents user from being selected for another match)
