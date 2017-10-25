@@ -28,8 +28,6 @@ var matchKey = "";
 youThisRound = "";
 themThisRound = "";
 
-
-var matchObject = {};
 var playerObject = {
     "status": "chilling",
     "logins": 0,
@@ -101,7 +99,6 @@ function findMatch(){
                 var opponent = snap.val()[i];
                 if(opponent["status"] === "searching" && i != keys["players"]){
                     pushObjToDB(buildMatchObject(playerObject, opponent), "matches");
-                    setUpPlayerListener()
                 };
             };
         });
@@ -110,10 +107,10 @@ function findMatch(){
         playerObject["status"] = "chilling";
         setDBInfo();
     };
-    // if(!listening){
-    //     setUpPlayerListener()
-    //     listening = true;
-    // };
+    if(!listening){
+        setUpPlayerListener()
+        listening = true;
+    };
 
 };
 
@@ -190,102 +187,105 @@ function updateDisplay(text, tag, delay){
      }, delay);
 };
 
-function win(){
-    
-}
 
+//evaluates the round and returns an object containing the results
+function evalRound(match_obj){
+    var pc = match_obj[youThisRound + "choice"];
+    var oc = match_obj[themThisRound + "choice"];
+    var op = match_obj[themThisRound]["username"]
+    output = {};
 
-function evalRound(pc, oc){
-    if(pc == "rock"){
-        if(oc == "rock"){
-            playerObject["ties"] ++
-        }
-        else if(oc == "paper"){
-            playerObject["losses"] ++
-        }
-        else{
-            playerObject["wins"] ++
-        }
+    output["opUrl"] = "assets/images/" + oc + ".gif";
+    output["playerUrl"] = "assets/images/flip_" + pc + ".gif";
+
+    //tie condition
+    if(pc === oc){
+        output["result"] = op + " threw " + oc + ". Tie Game!";
+        playerObject["ties"]++;
     }
-    else if(pc == "paper"){
-        if(oc == "rock"){
-            playerObject["wins"] ++
-        }
-        else if(oc == "paper"){
-            playerObject["ties"] ++
-        }
-        else{
-            playerObject["losses"] ++
-        }
+    //win condition
+    else if(pc === "rock" && oc === "scissors" || pc === "paper" && oc === "rock" || pc == "scissors" && oc === "paper"){
+        output["result"] = op + " threw " + oc + ". You Win";
+        playerObject["wins"]++;
     }
+    //loss condition
     else{
-        if(oc == "rock"){
-            playerObject["losses"] ++
-        }
-        else if(oc == "paper"){
-            playerObject["wins"] ++
-        }
-        else{
-            playerObject["ties"] ++
-        }
-    } 
+        output["result"] = op + " threw " + oc + ". You Lose";
+        playerObject["losses"]++;
+    };
     setDBInfo();
-}
+    return output;
+};
 
+function initiateRound(match_obj){
+    //set the firebase matchObject status to 'in progress', which dissables the game buttons
+    setDBInfo(["matches", keys["matches"], "status"], "in progress");
+
+    //start the count down
+    startCountDown();
+
+    var outcome = evalRound(match_obj);
+
+    displayResults(outcome);
+};
+
+//displays the 'rock, paper, scissors, shoot' count down
 function startCountDown(){
+    var target = $("#display");
     var text = ["Rock", "Paper", "Scissors", "Shoot!!"];
     var index = 1;
-    var countDisplay = $("<div id='count_down'></div>");
-    $("#display").append(countDisplay);
+    var countDiv = $("<div id='count_down'></div>");
 
-    
-    $("#count_down").html("<h1>Rock</h1>");
-    var countDown = setInterval(function(){
+    countDiv.html("<h1>Rock</h1>");
+    target.append(countDiv);
+
+    countDown = setInterval(function(){
         $("#count_down").html("<h1>" + text[index] + "</h1>");
-        if(index == text.length){
+        if(index === text.length){
             clearInterval(countDown);
             setDBInfo(["matches", keys["matches"], "status"], "waiting");
-            setDBInfo(["matches", keys["matches"], "player1choice"], "nothing");
-            setDBInfo(["matches", keys["matches"], "player2choice"], "nothing");
-            // database.ref().child("matches").child(matchKey).child("status").set("waiting");
-            // database.ref().child("matches").child(matchKey).child("player1choice").set("nothing");
-            // database.ref().child("matches").child(matchKey).child("player2choice").set("nothing");
+            setDBInfo(["matches", keys["matches"], "player1ready"], false);
+            setDBInfo(["matches", keys["matches"], "player2ready"], false);
             $("#display").html("");
         };
         index++;
     }, 750);
-
-
 };
 
 function displayResults(obj){
-     opThrow = obj[themThisRound + "choice"]
-     userThrow = obj[youThisRound + "choice"]
-
-
-
+    
     setTimeout(function(){
-        var opUrl = "assets/images/" + opThrow + ".gif";
-        var userUrl = "assets/images/flip_" + userThrow + ".gif";
-        $("#opponent_choice").attr("src", opUrl);
-        $("#player_choice").attr("src", userUrl);
-        evalRound(userThrow, opThrow);
-        database.ref().child("matches").child(keys["matches"]).child("status").set("waiting");
+        $("#opponent_choice").attr("src", obj["opUrl"]);
+        $("#player_choice").attr("src", obj["playerUrl"]);
+        setDBInfo(["matches", keys["matches"], "status"], "waiting");
+
     }, 2250);
-}
+};
 
 function choiceButton(choice){
-    setDBInfo(["matches", keys["matches"], youThisRound + "ready"], true);
-    setDBInfo(["matches", keys["matches"], youThisRound + "choice"], choice);
+    //grab current match status
+    var status = getDBInfo(["matches", keys["matches"], "status"])
 
-    var ready = getDBInfo(["matches", keys["matches"], themThisRound + "ready"]);
-        
-    if(ready){
-        setDBInfo(["matches", keys["matches"], "status"], "throwing");
-    }
-    else{
-        //$("#display").html("waiting for " + )
-    }
+    //ensure match is awating user input
+    if(status === "waiting"){
+
+        //set your choice for the round, and playerready attribute to true
+        setDBInfo(["matches", keys["matches"], youThisRound + "ready"], true);
+        setDBInfo(["matches", keys["matches"], youThisRound + "choice"], choice);
+
+        //'opponentReady' will be set to a boolean based on whether the opponent has picked yet
+        var opponentReady = getDBInfo(["matches", keys["matches"], themThisRound + "ready"]);
+            
+        //if they are ready, set the firebase matchObject status to 'throwing'. this is heard by  
+        //the matchListener and triggers the round
+        if(opponentReady){
+            setDBInfo(["matches", keys["matches"], "status"], "throwing");
+        }
+        //if they are not ready, display a waiting message
+        else{
+            $("#display").html("waiting for opponent")
+        };
+    };
 };
 
 
@@ -304,13 +304,23 @@ $(window).on("beforeunload", function(){
     removePlayerObj(matchKey);
 });
 
+//creates a listener for the playerObject in firebase: mainly used for updating the button text
 function setUpPlayerListener(){
     database.ref().child("players").child(keys["players"]).on("value", function(snap){
+
+        var button = $("#find_match_button")
         if(snap.val()["status"] === "searching"){
-            $("#find_match_button").html("searching...");
+            button.html("Cancel Search");
+            $("display").html("Searching for Match");
         }
         else if(snap.val()["status"] === "chilling"){
-            $("#find_match_button").html("Find Match");
+            button.removeClass("faded");
+            button.html("Find Match");
+            $("display").html("");
+        }
+        else if(snap.val()["status"] === "fighting"){
+            button.html("fighting");
+            button.addClass("faded");
         };
     });
 };
@@ -358,16 +368,30 @@ $(document).ready(function(){
         };
 
         if(inMatch){
+            //unfade game buttons buttons
+            $(".game-btn").removeClass("faded");
+
+            //record node unique key for this match in the 'keys' object
             keys["matches"] = snap.key;
+
+            //set playerObject status to fighting (unlocks the game buttons and prevents user from being selected for another match)
             playerObject["status"] = "fighting";
+
+            //update firebase playerObject to show that we are in a match 
             setDBInfo();
+
+            //display the 'text' variable in the #display div
             updateDisplay(text, "h2", 4000);
-            matchListener = database.ref().child("matches").child(snap.key).on("value", function(snap){
-                matchObject = snap.val();
-                if(matchObject["status"] === "throwing"){
-                    startCountDown();
-                    displayResults(matchObject);
-                }
+
+            //create a listener that reacts to changes in the match status
+            matchListener = database.ref().child("matches").child(snap.key).child("status").on("value", function(snap){
+
+                //if the match status is set to "throwing"...
+                if(snap.val() === "throwing"){
+
+                    //grab the entire matchObject from firebase and pass it to the 'initiateRound' function.
+                    initiateRound(getDBInfo(["matches", keys["matches"]]))
+                };
             });
         }
     });
@@ -375,7 +399,10 @@ $(document).ready(function(){
 
 
 
+    //------------------------Bind Game Buttons--------------------------------
 
+    //the 'status' attribute of the playerObject is only set to 'fighting' when
+    //user is currently in a match. buttons therefore do nothing outside of a match
     $("#rock_button").on("click", function(){
         if(playerObject["status"] === "fighting"){
             choiceButton("rock");
