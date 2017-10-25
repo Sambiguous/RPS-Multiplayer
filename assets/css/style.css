@@ -1,12 +1,12 @@
+/* possible other color: #AF929D */
+
 form {
     width: 100%;
 }
 
 body {
-    background-color: #4F7CAC;
+    background-color: #727072;
 }
-
-
 
 .stat{
     border-bottom: 1px solid #931621;
@@ -15,6 +15,26 @@ body {
 
 .stat span {
     float: right;
+}
+
+.faded {
+    opacity: 0.5;
+}
+
+.enemy {
+    color: #931621;
+}
+
+.you {
+    color: #4F7CAC;
+}
+
+#scoreboard {
+    background-color: #4F7CAC;
+}
+
+#display-container {
+    background-color: #336843;
 }
 
 #chat_log {
@@ -35,9 +55,7 @@ body {
     height: 50px;
 }
 
-.faded {
-    opacity: 0.5;
-}
+
 
 #overlay{
     position: absolute;
@@ -92,8 +110,6 @@ body {
     min-height: 75px;
     position: relative;
     text-align: center;
-    background-color: rgb(51, 104, 67);
-    
 }
 
 #count_down{

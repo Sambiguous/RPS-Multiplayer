@@ -12,20 +12,21 @@ var database = firebase.database();
 
 //-----------------------Declare variables--------------------------------
 
-//keeps track of the nodes the player object resides in in the database
-var keys = {};
 
 var listening = false;
-//
-var matchListener;
-var playerListener;
 
+//various listeners and intervals that will be defined later
+var matchListener;
+var matchChatListener;
+var playerListener;
 var countDown;
 
-
 //stores either "player1" or "player2" depending on the current match
-youThisMatch = "";
-themThisMatch = "";
+var youThisMatch = "";
+var themThisMatch = "";
+
+//keeps track of the nodes the player object resides in in the database
+var keys = {};
 
 //stores opponenst lifetime record: re-assigned every time you enter a new match
 var opStats = {
@@ -35,7 +36,7 @@ var opStats = {
     "ties": 0
 };
 
-
+//keeps track of all of user's stats
 var playerObject = {
     "status": "chilling",
     "logins": 0,
@@ -124,7 +125,6 @@ function findMatch(){
         setUpPlayerListener()
         listening = true;
     };
-
 };
 
 
@@ -143,10 +143,6 @@ function buildMatchObject(you, opponent){
 
     return output;
 };
-
-database.ref().child("players").on("child_removed", function(snap){
-    //do stuff here when a player leaves the lobby
-});
 
 function checkLocalStorage(){//check to see if user has played before
 
@@ -201,7 +197,6 @@ function updateDisplay(text, tag, delay){
      }, delay);
 };
 
-
 //evaluates the round and returns an object containing the results
 function evalRound(match_obj){
     var pc = match_obj[youThisMatch + "choice"];
@@ -245,7 +240,6 @@ function initiateRound(match_obj){
 
     displayResults(outcome);
 };
-
 //displays the 'rock, paper, scissors, shoot' count down
 function startCountDown(){
     var target = $("#display");
@@ -330,19 +324,6 @@ function choiceButton(choice){
 };
 
 
-$(window).on("beforeunload", function(){
-
-    //set status back to 'chilling'
-    playerObject["status"] = "chilling";
-
-    //save playerObject to local storage
-    //setLS(playerObject);
-
-    //delete player object from all nodes
-    for(var i in keys){
-        removePlayerObj(i);
-    };
-});
 
 //creates a listener for the playerObject in firebase: mainly used for updating the button text
 function setUpPlayerListener(){
@@ -371,10 +352,31 @@ function getOpStats(obj){
     opStats["ties"] = obj["ties"];
 };
 
+$(window).on("beforeunload", function(){
+    
+    //set status back to 'chilling'
+    playerObject["status"] = "chilling";
+    
+    //save playerObject to local storage
+    setLS(playerObject);
+    
+    //delete player object from all nodes
+    for(var i in keys){
+        removePlayerObj(i);
+    };
+});
+
+function initializeMatchChat(){
+    $("#chat_log").html("");
+    $("#chat_log").append($("<ul id='chat'></ul>"))
+    matchChatListener = database.ref().child("matches").child(keys["matches"]).child("chat").on("child_added", function(snap){
+        var entry = $("<li class='entry'><span class='enemy'>" + snap.val()["username"] + ":</span> " + snap.val()["text"] + "</li>")
+        $("#chat").append(entry)
+    })
+}
 
 $(document).ready(function(){
 
-    localStorage.clear()
     checkLocalStorage();
 
     if(playerObject["logins"] === 0){
@@ -444,12 +446,11 @@ $(document).ready(function(){
                     initiateRound(getDBInfo(["matches", keys["matches"]]))
                 };
             });
+
+            initializeMatchChat();
+
         }
     });
-
-
-
-
     //------------------------Game Buttons Bindings--------------------------------
 
     //the 'status' attribute of the playerObject is only set to 'fighting' when
@@ -469,6 +470,17 @@ $(document).ready(function(){
     $("#scissors_button").on("click", function(){
         if(playerObject["status"] === "fighting"){
             choiceButton("scissors");
+        };
+    });
+
+    $("#match_chat_submit").on("click", function(event){
+        if(playerObject["status"] === "fighting"){
+            event.preventDefault();
+            var textSubmition = {
+                "username": playerObject["username"],
+                "text": $("#match_chat_input").val().trim()
+            };
+            database.ref().child("matches").child(keys["matches"]).child("chat").push(textSubmition);
         };
     });
 
