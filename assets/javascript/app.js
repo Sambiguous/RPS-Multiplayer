@@ -10,15 +10,15 @@ firebase.initializeApp(config);
 var database = firebase.database();
 
 
-//-----------------------Declare variables--------------------------------
+//-----------------------DECLARE GLOBAL VARIABLES--------------------------
 
-
+var isQuitter = false;
 var listening = false;
 
 //various listeners and intervals that will be defined later
 var matchListener;
 var matchChatListener;
-var playerListener;
+var lobbyListener;
 var countDown;
 
 //stores either "player1" or "player2" depending on the current match
@@ -26,11 +26,12 @@ var youThisMatch = "";
 var themThisMatch = "";
 
 //keeps track of the nodes the player object resides in in the database
-var keys = {};
+var playerKey;
+var matchKey;
 
 //stores opponenst lifetime record: re-assigned every time you enter a new match
 var opStats = {
-    "name": "Opponent",
+    "username": "Opponent",
     "wins": 0,
     "losses": 0,
     "ties": 0
@@ -46,14 +47,12 @@ var playerObject = {
     "username": "Player", 
 };
 
-function setLS(obj){//slighty shorter-hand way to update the local storage object
-    localStorage.setItem("rps", JSON.stringify(obj));
-};
+//-------------------FIREBASE UTILITY FUNCTIONS---------------------
 
-function setDBInfo(path = [], value = playerObject){
+function setDBInfo(path = [], value = playerObject){//updates info in a specific firebase node
     var sz = path.length;
     if(sz === 0){
-        database.ref().child("players").child(keys["players"]).set(value);
+        database.ref().child("players").child(playerKey).set(value);
     }
     else if(sz === 1){
         database.ref().child(path[0]).set(value);
@@ -66,50 +65,63 @@ function setDBInfo(path = [], value = playerObject){
     } 
 };
 
-function getDBInfo(path){
+function getDBInfo(path){//grabs info from a specific firebase node
     var output;
     if(path.length === 1){
         database.ref().child(path[0]).once("value", function(snap){
             output = snap.val();
-        })
+        });
     }
     else if(path.length === 2){
         database.ref().child(path[0]).child(path[1]).once("value", function(snap){
             output = snap.val();
-        })
+        });
     }
     else if(path.length === 3){
         database.ref().child(path[0]).child(path[1]).child(path[2]).once("value", function(snap){
             output = snap.val();
-        })
+        });
     };
     return output;
-}
-
-function pushObjToDB(obj, node){//appends object to the specified database node and records the unique key string
-    var key = database.ref().child(node).push(obj).key;
-    keys[node] = key;
 };
 
-function removePlayerObj(node){//removes the player object from the designated node in the database
-    database.ref().child(node).child(keys[node]).remove();
-    delete keys[node];
-};
+
+//-------------------LOCAL STORAGE FUNCTIONS--------------------------
+
+function checkLocalStorage(){//check to see if user has played before
+    
+        //if user has not played, set local storage equal to default playerObject
+        if(localStorage.getItem("rps") === null){
+            localStorage.setItem("rps", JSON.stringify(playerObject)); 
+        }
+        //if they have played before, set playerObject equal to the stored object
+        else{
+            playerObject = JSON.parse(localStorage.getItem("rps"));
+        };
+    };
+
+
 
 function findMatch(){
+    //if user is currently chilling...
     if(playerObject["status"] === "chilling"){
-        $("#display").html("<h4>Searching for match...</h4>");
+        //set playerObject status to 'searching'
         playerObject["status"] = "searching";
+        
+        //display message on #display div
+        $("#display").html("<h4>Searching for match...</h4>");
+
         setDBInfo();
         database.ref().child("players").once("value", function(snap){
             for(var i in snap.val()){
                 var opponent = snap.val()[i];
 
-                if(opponent["status"] === "searching" && i != keys["players"]){
+                if(opponent["status"] === "searching" && i != playerKey){
                     //grab opponent record
                     getOpStats(opponent);
                     displayRecord();
-                    pushObjToDB(buildMatchObject(playerObject, opponent), "matches");
+                    matchKey = database.ref().child("matches").push(buildMatchObject(playerObject, opponent)).key;
+                    database.ref().child("matches").child(matchKey).onDisconnect().remove()
                 };
             };
         });
@@ -128,38 +140,28 @@ function findMatch(){
 };
 
 
-function buildMatchObject(you, opponent){
+function buildMatchObject(user, opponent){
     output = {}
 
     output["status"] = "waiting";
     output["round"] = 0;
-    output["player1"] = you;
+    output["player1"] = user;
     output["player1choice"] = "";
     output["player1ready"] = false;
     output["player2"] = opponent;
     output["player2choice"] = "";
     output["player2ready"] = false;
 
-
     return output;
 };
 
-function checkLocalStorage(){//check to see if user has played before
 
-    //if user has not played, set local storage equal to default playerObject
-    if(localStorage.getItem("rps") === null){
-        setLS(playerObject); 
-    }
-    //if they have played before, set playerObject equal to the stored object
-    else{
-        playerObject = JSON.parse(localStorage.getItem("rps"));
-    };
-};
 
 function submitUsername(){//only executes if it is the first time the player has visited the page
     //grab the user's input
     var userName = $("#username_input").val().trim();
     if(userName.length === 0){
+        $("#username_prompt").empty();
         $("#username_prompt").append($("<h3>Username must contain at least 1 character</h3>"))
         return;
     };
@@ -170,7 +172,8 @@ function submitUsername(){//only executes if it is the first time the player has
     //hide overlay
     $("#overlay").hide();
 
-    pushObjToDB(playerObject, "players");
+    playerKey = database.ref().child("players").push(playerObject).key;
+    database.ref().child("players").child(playerKey).onDisconnect().remove();
     displayRecord();
 };
 
@@ -231,7 +234,7 @@ function evalRound(match_obj){
 
 function initiateRound(match_obj){
     //set the firebase matchObject status to 'in progress', which dissables the game buttons
-    setDBInfo(["matches", keys["matches"], "status"], "in progress");
+    setDBInfo(["matches", matchKey, "status"], "in progress");
 
     //start the count down
     startCountDown();
@@ -252,9 +255,9 @@ function startCountDown(){
         target.html("<h1>" + text[index] + "</h1>");
         if(index === text.length){
             clearInterval(countDown);
-            setDBInfo(["matches", keys["matches"], "status"], "waiting");
-            setDBInfo(["matches", keys["matches"], "player1ready"], false);
-            setDBInfo(["matches", keys["matches"], "player2ready"], false);
+            setDBInfo(["matches", matchKey, "status"], "waiting");
+            setDBInfo(["matches", matchKey, "player1ready"], false);
+            setDBInfo(["matches", matchKey, "player2ready"], false);
             target.html("");
         };
         index++;
@@ -262,23 +265,18 @@ function startCountDown(){
 };
 
 function displayRecord(){
-    var wins = playerObject["wins"];
-    var losses = playerObject["losses"];
-    var ties = playerObject["ties"];
+    
     $("#title").html(playerObject["username"]);
-    $("#wins").html(wins);
-    $("#losses").html(losses);
-    $("#ties").html(ties);
-    $("#rounds").html(wins + losses + ties);
+    $("#wins").html(playerObject["wins"]);
+    $("#losses").html(playerObject["losses"]);
+    $("#ties").html(playerObject["ties"]);
+    $("#rounds").html(playerObject["wins"] + playerObject["losses"] + playerObject["ties"]);
 
-    var opWins = opStats["wins"];
-    var opLosses = opStats["losses"];
-    var opTies = opStats["ties"];
-    $("#op_title").html(opStats["name"]);
-    $("#op_wins").html(opWins);
-    $("#op_losses").html(opLosses);
-    $("#op_ties").html(opTies);
-    $("#op_rounds").html(opWins + opLosses + opTies);
+    $("#op_title").html(opStats["username"]);
+    $("#op_wins").html(opStats["wins"]);
+    $("#op_losses").html(opStats["losses"]);
+    $("#op_ties").html(opStats["ties"]);
+    $("#op_rounds").html(opStats["wins"] + opStats["losses"] + opStats["ties"]);
 
 };
 
@@ -289,7 +287,7 @@ function displayResults(obj){
         $("#opponent_choice").attr("src", obj["opUrl"]);
         $("#player_choice").attr("src", obj["playerUrl"]);
         $("#display").html("<h2>" + obj["result"] + "<h2>");
-        setDBInfo(["matches", keys["matches"], "status"], "waiting");
+        setDBInfo(["matches", matchKey, "status"], "waiting");
         displayRecord();
         setTimeout(function(){
             $("#display").html("");
@@ -299,46 +297,48 @@ function displayResults(obj){
 
 function choiceButton(choice){
     //grab current match status
-    var status = getDBInfo(["matches", keys["matches"], "status"])
+    var status = getDBInfo(["matches", matchKey, "status"])
 
     //ensure match is awating user input
     if(status === "waiting"){
 
         //set your choice for the round, and playerready attribute to true
-        setDBInfo(["matches", keys["matches"], youThisMatch + "ready"], true);
-        setDBInfo(["matches", keys["matches"], youThisMatch + "choice"], choice);
+        setDBInfo(["matches", matchKey, youThisMatch + "ready"], true);
+        setDBInfo(["matches", matchKey, youThisMatch + "choice"], choice);
 
         //'opponentReady' will be set to a boolean based on whether the opponent has picked yet
-        var opponentReady = getDBInfo(["matches", keys["matches"], themThisMatch + "ready"]);
+        var opponentReady = getDBInfo(["matches", matchKey, themThisMatch + "ready"]);
             
         //if they are ready, set the firebase matchObject status to 'throwing'. this is heard by  
         //the matchListener and triggers the round
         if(opponentReady){
-            setDBInfo(["matches", keys["matches"], "status"], "throwing");
+            setDBInfo(["matches", matchKey, "status"], "throwing");
         }
         //if they are not ready, display a waiting message
         else{
-            $("#display").html("<h3>waiting for " + opStats["name"] + "</h3>")
+            $("#display").html("<h3>waiting for " + opStats["username"] + "</h3>")
         };
     };
 };
 
 
 
-//creates a listener for the playerObject in firebase: mainly used for updating the button text
+//creates a listener for the playerObject in firebase: mainly used for updating the 'Find Match' button text
 function setUpPlayerListener(){
-    database.ref().child("players").child(keys["players"]).on("value", function(snap){
-
+    database.ref().child("players").child(playerKey).on("value", function(snap){
+        
+        var status = snap.val()["status"];
         var button = $("#find_match_button")
-        if(snap.val()["status"] === "searching"){
+        
+        if(status === "searching"){
             button.html("Cancel Search");
         }
-        else if(snap.val()["status"] === "chilling"){
+        else if(status === "chilling"){
             button.removeClass("faded");
             button.html("Find Match");
             $("display").html("");
         }
-        else if(snap.val()["status"] === "fighting"){
+        else if(status === "fighting"){
             button.html("fighting");
             button.addClass("faded");
         };
@@ -346,31 +346,17 @@ function setUpPlayerListener(){
 };
 
 function getOpStats(obj){
-    opStats["name"] = obj["username"];
+    opStats["username"] = obj["username"];
     opStats["wins"] = obj["wins"];
     opStats["losses"] = obj["losses"];
     opStats["ties"] = obj["ties"];
 };
 
-$(window).on("beforeunload", function(){
-    
-    //set status back to 'chilling'
-    playerObject["status"] = "chilling";
-    
-    //save playerObject to local storage
-    setLS(playerObject);
-    
-    //delete player object from all nodes
-    for(var i in keys){
-        removePlayerObj(i);
-    };
-});
-
 function initializeMatchChat(){
     $("#chat_log").html("");
     $("#chat_log").append($("<ul id='chat'></ul>"))
-    matchChatListener = database.ref().child("matches").child(keys["matches"]).child("chat").on("child_added", function(snap){
-        obj = snap.val();
+    matchChatListener = database.ref().child("matches").child(matchKey).child("chat").on("child_added", function(snap){
+        var obj = snap.val();
         var entryClass;
         if(obj["username"] === playerObject["username"]){entryClass = "you"}
         else{entryClass = "enemy"}
@@ -378,27 +364,44 @@ function initializeMatchChat(){
         var entry = $("<li class='entry'><span class='" + entryClass + "'>" + snap.val()["username"] + ":</span> " + snap.val()["text"] + "</li>")
         $("#chat").append(entry)
     })
-}
+};
+
+
+$(window).on("beforeunload", function(){
+
+    //set status back to 'chilling'
+    playerObject["status"] = "chilling";
+    
+    //save playerObject to local storage
+    localStorage.setItem("rps", JSON.stringify(obj));
+});
+
+function displayLobby(){
+    return "";
+};
+
+
 
 $(document).ready(function(){
 
-    checkLocalStorage();
-
-    if(playerObject["logins"] === 0){
-        createOverlay();
-    }
-    else{
-        pushObjToDB(playerObject, "players");
-        displayRecord();
-    };
+    database.ref().child("players").on("child_added", function(snap){
+        var player = $("<div>" + snap.val()["username"] + "</div>")
+        $("#lobby").append(player);
+    });
 
     database.ref().child("matches").on("child_removed", function(snap){
         if(playerObject["status"] === "fighting"){
-            if(snap.key === keys["matches"]){
-                delete keys["matches"];
+            if(snap.key === matchKey){
+                matchKey = "";
                 playerObject["status"] = "chilling";
-                console.log("match listener works")
                 setDBInfo();
+                if(!isQuitter){
+                    var text = opStats["username"] + " has left the match.";
+                    updateDisplay(text, "h2", 4000);
+                }
+                else{
+                    isQuitter = false;
+                };
             };
         };
     });
@@ -425,8 +428,8 @@ $(document).ready(function(){
             //unfade game buttons buttons
             $(".game-btn").removeClass("faded");
 
-            //record node unique key for this match in the 'keys' object
-            keys["matches"] = snap.key;
+            //save unique node key to the matchKey variable
+            matchKey = snap.key;
 
             //grab opponent record
             getOpStats(getDBInfo(["matches", snap.key, themThisMatch]));
@@ -448,7 +451,7 @@ $(document).ready(function(){
                 if(snap.val() === "throwing"){
 
                     //grab the entire matchObject from firebase and pass it to the 'initiateRound' function.
-                    initiateRound(getDBInfo(["matches", keys["matches"]]))
+                    initiateRound(getDBInfo(["matches", matchKey]))
                 };
             });
 
@@ -456,7 +459,19 @@ $(document).ready(function(){
 
         }
     });
-    //------------------------Game Buttons Bindings--------------------------------
+
+    checkLocalStorage();
+
+    if(playerObject["logins"] === 0){
+        createOverlay();
+    }
+    else{
+        playerKey = database.ref().child("players").push(playerObject).key;
+        database.ref().child("players").child(playerKey).onDisconnect().remove();
+        displayRecord();
+    };
+
+    //------------------------Game Button Bindings--------------------------------
 
     //the 'status' attribute of the playerObject is only set to 'fighting' when
     //user is currently in a match. buttons therefore do nothing outside of a match
@@ -473,6 +488,7 @@ $(document).ready(function(){
     });
 
     $("#scissors_button").on("click", function(){
+        database.ref().child("players").remove();
         if(playerObject["status"] === "fighting"){
             choiceButton("scissors");
         };
@@ -487,7 +503,7 @@ $(document).ready(function(){
             };
 
             if(textSubmition["text"].length != 0){
-                database.ref().child("matches").child(keys["matches"]).child("chat").push(textSubmition);
+                database.ref().child("matches").child(matchKey).child("chat").push(textSubmition);
             };
 
             $("#match_chat_input").val("");
@@ -495,4 +511,5 @@ $(document).ready(function(){
     });
 
     playerObject["logins"] ++;
+    console.log(playerObject);
 });
