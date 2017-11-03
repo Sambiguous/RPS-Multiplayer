@@ -385,8 +385,11 @@ function displayLobby(){
 $(document).ready(function(){
 
     database.ref().child("players").on("child_added", function(snap){
-        var player = $("<div>" + snap.val()["username"] + "</div>")
-        $("#lobby").append(player);
+        $("#lobby").append($("<div id='" + snap.key + "'>" + snap.val()["username"] + "</div>"));
+    });
+
+    database.ref().child("players").on("child_removed", function(snap){
+        ($("#" + snap.key)).remove();
     });
 
     database.ref().child("matches").on("child_removed", function(snap){
