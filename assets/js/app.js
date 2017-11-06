@@ -398,13 +398,13 @@ $(document).ready(function(){
         var inMatch = false;
         var text = "You are now playing against "
 
-        if(newMatch["player1"]["username"] === playerObject["username"]){
+        if(newMatch["player1"]["key"] === playerKey){
             text += newMatch["player2"]["username"];
             youThisMatch = "player1";
             themThisMatch = "player2";
             inMatch = true;
         }
-        else if(newMatch["player2"]["username"] === playerObject["username"]){
+        else if(newMatch["player2"]["key"] === playerKey){
             text += newMatch["player1"]["username"];
             youThisMatch = "player2";
             themThisMatch = "player1";
@@ -415,8 +415,9 @@ $(document).ready(function(){
             //unfade game buttons buttons
             $(".game-btn").removeClass("faded");
 
-            //save unique node key to the matchKey variable
+            //save unique node key to the matchKey variable and define disconnect behavior
             matchKey = snap.key;
+            database.ref().child("matches").child(matchKey).onDisconnect().remove()
 
             //grab opponent record
             getOpStats(getDBInfo(["matches", snap.key, themThisMatch]));
