@@ -374,7 +374,7 @@ $(window).on("beforeunload", function(){
     playerObject["status"] = "chilling";
     
     //save playerObject to local storage
-    localStorage.setItem("rps", JSON.stringify(obj));
+    localStorage.setItem("rps", JSON.stringify(playerObject));
 });
 
 function displayLobby(){
