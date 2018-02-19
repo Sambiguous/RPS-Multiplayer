@@ -86,8 +86,6 @@ function getDBInfo(path){//grabs info from a specific firebase node
 };
 
 
-//-------------------LOCAL STORAGE FUNCTIONS--------------------------
-
 function checkLocalStorage(){//check to see if user has played before
     
         //if user has not played, set local storage equal to default playerObject
@@ -354,8 +352,7 @@ function getOpStats(obj){
 };
 
 function initializeMatchChat(){
-    $("#chat_log").html("");
-    $("#chat_log").append($("<ul id='chat'></ul>"))
+    $("#chat_log").html($("<ul id='chat'></ul>"));
     matchChatListener = database.ref().child("matches").child(matchKey).child("chat").on("child_added", function(snap){
         var obj = snap.val();
         var entryClass;
@@ -376,11 +373,6 @@ $(window).on("beforeunload", function(){
     //save playerObject to local storage
     localStorage.setItem("rps", JSON.stringify(playerObject));
 });
-
-function displayLobby(){
-    return "";
-};
-
 
 
 $(document).ready(function(){
@@ -457,13 +449,19 @@ $(document).ready(function(){
                 if(!isQuitter){
                     var text = opStats["username"] + " has left the match.";
                     updateDisplay(text, "h2", 4000);
+                    $(".game-btn").addClass("faded");
                 }
                 else{
                     isQuitter = false;
+                    $(".game-btn").addClass("faded");
                 };
             };
         };
     });
+
+    database.ref().child("players").child("chat").on("child_added", function(snap){
+        
+    })
 
 
     checkLocalStorage();
@@ -495,7 +493,6 @@ $(document).ready(function(){
     });
 
     $("#scissors_button").on("click", function(){
-        database.ref().child("players").remove();
         if(playerObject["status"] === "fighting"){
             choiceButton("scissors");
         };
@@ -516,6 +513,21 @@ $(document).ready(function(){
             $("#match_chat_input").val("");
         };
     });
+
+    // $("#lobby_chat_submit").on("click", function(event){
+    //     event.preventDefault();
+    //     var textSubmition = {
+    //         "username": playerObject["username"],
+    //         "text": $("lobby_chat_input").val().trim()
+    //     };
+
+    //     if(!textSubmition["text"].length === 0){
+    //         database.ref().child("players").child("chat").push(textSubmission);
+    //     }
+
+    //     $("#lobby_chat_input").val("");
+        
+    // });
 
     playerObject["logins"] ++;
     console.log(playerObject);
